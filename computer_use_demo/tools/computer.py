@@ -76,6 +76,7 @@ class ComputerTool(BaseAnthropicTool):
 
     _screenshot_delay = 0.5
     _scaling_enabled = False  # Disable scaling for ultrawide monitors
+    _max_image_size = 5 * 1024 * 1024  # 5MB in bytes
 
     @property
     def options(self) -> ComputerToolOptions:
@@ -199,9 +200,29 @@ class ComputerTool(BaseAnthropicTool):
             x, y = self.scale_coordinates(ScalingSource.COMPUTER, self.width, self.height)
             screenshot = screenshot.resize((x, y), Image.Resampling.LANCZOS)
 
-        # Save to bytes buffer
+        # Reduce image size while maintaining PNG format
+        # First try reducing the color palette
+        if screenshot.mode == 'RGB':
+            screenshot = screenshot.convert('P', palette=Image.Palette.ADAPTIVE, colors=256)
+            
+        # Save to bytes buffer with compression
         img_buffer = io.BytesIO()
-        screenshot.save(img_buffer, format='PNG')
+        screenshot.save(img_buffer, format='PNG', optimize=True, compress_level=9)
+        
+        # If still too large, resize the image
+        if img_buffer.tell() > self._max_image_size:
+            scale_factor = 0.8  # Start with 80% of original size
+            while img_buffer.tell() > self._max_image_size and scale_factor > 0.3:
+                new_width = int(screenshot.width * scale_factor)
+                new_height = int(screenshot.height * scale_factor)
+                resized = screenshot.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                
+                img_buffer.seek(0)
+                img_buffer.truncate()
+                resized.save(img_buffer, format='PNG', optimize=True, compress_level=9)
+                
+                scale_factor -= 0.1
+        
         img_buffer.seek(0)
         
         # Convert to base64
