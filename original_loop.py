@@ -1,6 +1,5 @@
 """
-Agentic sampling loop that calls the Anthropic API and local implementation of anthropic-defined computer use tools.
-Adapted for Windows environment.
+Agentic sampling loop that calls the Anthropic API and local implenmentation of anthropic-defined computer use tools.
 """
 
 import platform
@@ -23,14 +22,16 @@ from anthropic.types.beta import (
     BetaToolResultBlockParam,
 )
 
-from .tools import ComputerTool, ToolCollection, ToolResult
+from .tools import BashTool, ComputerTool, EditTool, ToolCollection, ToolResult
 
 BETA_FLAG = "computer-use-2024-10-22"
+
 
 class APIProvider(StrEnum):
     ANTHROPIC = "anthropic"
     BEDROCK = "bedrock"
     VERTEX = "vertex"
+
 
 PROVIDER_TO_DEFAULT_MODEL_NAME: dict[APIProvider, str] = {
     APIProvider.ANTHROPIC: "claude-3-5-sonnet-20241022",
@@ -38,33 +39,28 @@ PROVIDER_TO_DEFAULT_MODEL_NAME: dict[APIProvider, str] = {
     APIProvider.VERTEX: "claude-3-5-sonnet-v2@20241022",
 }
 
-# System prompt adapted for Windows environment
+
+# This system prompt is optimized for the Docker environment in this repository and
+# specific tool combinations enabled.
+# We encourage modifying this system prompt to ensure the model has context for the
+# environment it is running in, and to provide any additional information that may be
+# helpful for the task at hand.
 SYSTEM_PROMPT = f"""<SYSTEM_CAPABILITY>
-* You are utilizing a Windows {platform.machine()} system with internet access.
-* You have access to mouse and keyboard control through PyAutoGUI.
-* You can perform clicks, type text, and take screenshots.
-* The system maintains exact monitor resolution for perfect accuracy.
-* Screenshots are taken at full monitor resolution and compressed only if needed.
-* The system properly accounts for Windows DPI scaling and taskbar position.
-* When using your computer function calls, they take a while to run and send back to you. Where possible/feasible, try to chain multiple of these calls all into one function calls request.
-* The current date is {datetime.today().strftime('%A, %B %d, %Y')}.
+* You are utilising an Ubuntu virtual machine using {platform.machine()} architecture with internet access.
+* You can feel free to install Ubuntu applications with your bash tool. Use curl instead of wget.
+* To open firefox, please just click on the firefox icon.  Note, firefox-esr is what is installed on your system.
+* Using bash tool you can start GUI applications, but you need to set export DISPLAY=:1 and use a subshell. For example "(DISPLAY=:1 xterm &)". GUI apps run with bash tool will appear within your desktop environment, but they may take some time to appear. Take a screenshot to confirm it did.
+* When using your bash tool with commands that are expected to output very large quantities of text, redirect into a tmp file and use str_replace_editor or `grep -n -B <lines before> -A <lines after> <query> <filename>` to confirm output.
+* When viewing a page it can be helpful to zoom out so that you can see everything on the page.  Either that, or make sure you scroll down to see everything before deciding something isn't available.
+* When using your computer function calls, they take a while to run and send back to you.  Where possible/feasible, try to chain multiple of these calls all into one function calls request.
+* The current date is {datetime.today().strftime('%A, %B %-d, %Y')}.
 </SYSTEM_CAPABILITY>
 
 <IMPORTANT>
-* The system maintains exact screen dimensions - no resolution scaling is performed.
-* Screenshots are taken at full monitor resolution to maintain perfect accuracy.
-* Only compression is applied if needed to stay under size limits.
-* The system handles Windows-specific elements like taskbar and DPI scaling.
-* When viewing a page it can be helpful to zoom out so that you can see everything on the page.
-</IMPORTANT>
+* When using Firefox, if a startup wizard appears, IGNORE IT.  Do not even click "skip this step".  Instead, click on the address bar where it says "Search or enter address", and enter the appropriate search term or URL there.
+* If the item you are looking at is a pdf, if after taking a single screenshot of the pdf it seems that you want to read the entire document instead of trying to continue to read the pdf from your screenshots + navigation, determine the URL, use curl to download the pdf, install and use pdftotext to convert it to a text file, and then read that text file directly with your StrReplaceEditTool.
+</IMPORTANT>"""
 
-<COORDINATE_HANDLING>
-* Coordinates are maintained at exact screen resolution.
-* DPI scaling is properly handled for accurate positioning.
-* Taskbar position is accounted for in coordinate calculations.
-* The system maintains perfect 1:1 pixel mapping with the screen.
-* Coordinate translations preserve exact screen positions.
-</COORDINATE_HANDLING>"""
 
 async def sampling_loop(
     *,
@@ -84,6 +80,8 @@ async def sampling_loop(
     """
     tool_collection = ToolCollection(
         ComputerTool(),
+        BashTool(),
+        EditTool(),
     )
     system = (
         f"{SYSTEM_PROMPT}{' ' + system_prompt_suffix if system_prompt_suffix else ''}"
@@ -101,6 +99,9 @@ async def sampling_loop(
             client = AnthropicBedrock()
 
         # Call the API
+        # we use raw_response to provide debug information to streamlit. Your
+        # implementation may be able call the SDK directly with:
+        # `response = client.messages.create(...)` instead.
         raw_response = client.beta.messages.with_raw_response.create(
             max_tokens=max_tokens,
             messages=messages,
