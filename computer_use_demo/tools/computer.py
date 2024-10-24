@@ -74,6 +74,41 @@ class ComputerToolOptions(TypedDict):
     display_width_px: int
     display_number: int | None
 
+class CoordinateTranslator:
+    """Handles coordinate translation between physical screen and API target space."""
+    
+    def __init__(self, dpi_scale: float, taskbar_offset: int, 
+                 physical_width: int, physical_height: int,
+                 target_width: int, target_height: int):
+        self.dpi_scale = dpi_scale
+        self.taskbar_offset = taskbar_offset
+        self.physical_width = physical_width
+        self.physical_height = physical_height
+        self.target_width = target_width
+        self.target_height = target_height
+        
+        # Calculate scaling factors
+        self.x_scale = physical_width / target_width
+        self.y_scale = physical_height / target_height
+        
+        logger.debug(f"Coordinate translator initialized:")
+        logger.debug(f"DPI scale: {dpi_scale}")
+        logger.debug(f"Taskbar offset: {taskbar_offset}")
+        logger.debug(f"X scale: {self.x_scale}")
+        logger.debug(f"Y scale: {self.y_scale}")
+    
+    def api_to_screen(self, x: int, y: int) -> tuple[int, int]:
+        """Convert coordinates from API space to physical screen space."""
+        screen_x = int(x * self.x_scale / self.dpi_scale)
+        screen_y = int(y * self.y_scale / self.dpi_scale) + self.taskbar_offset
+        return screen_x, screen_y
+    
+    def screen_to_api(self, x: int, y: int) -> tuple[int, int]:
+        """Convert coordinates from physical screen space to API space."""
+        api_x = int(x * self.dpi_scale / self.x_scale)
+        api_y = int((y - self.taskbar_offset) * self.dpi_scale / self.y_scale)
+        return api_x, api_y
+
 def chunks(s: str, chunk_size: int) -> list[str]:
     return [s[i : i + chunk_size] for i in range(0, len(s), chunk_size)]
 
