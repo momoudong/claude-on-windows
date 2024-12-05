@@ -76,6 +76,7 @@ async def sampling_loop(
     tool_output_callback: Callable[[ToolResult, str], None],
     api_response_callback: Callable[[APIResponse[BetaMessage]], None],
     api_key: str,
+    api_base_url: str,
     only_n_most_recent_images: int | None = None,
     max_tokens: int = 4096,
 ):
@@ -94,7 +95,7 @@ async def sampling_loop(
             _maybe_filter_to_n_most_recent_images(messages, only_n_most_recent_images)
 
         if provider == APIProvider.ANTHROPIC:
-            client = Anthropic(api_key=api_key)
+            client = Anthropic(api_key=api_key, base_url=api_base_url)
         elif provider == APIProvider.VERTEX:
             client = AnthropicVertex()
         elif provider == APIProvider.BEDROCK:

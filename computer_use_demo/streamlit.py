@@ -68,6 +68,8 @@ def init_session_state():
         st.session_state.error = None
     if "api_key" not in st.session_state:
         st.session_state.api_key = os.getenv("ANTHROPIC_API_KEY", "")
+    if 'api_base_url' not in st.session_state:
+        st.session_state.api_base_url = os.getenv("ANTHROPIC_BASE_URL", "")
     if "provider" not in st.session_state:
         st.session_state.provider = APIProvider.ANTHROPIC.value
     if "provider_radio" not in st.session_state:
@@ -81,7 +83,7 @@ def init_session_state():
     if "tools" not in st.session_state:
         st.session_state.tools = {}
     if "only_n_most_recent_images" not in st.session_state:
-        st.session_state.only_n_most_recent_images = 10
+        st.session_state.only_n_most_recent_images = os.getenv("MOST_IMAGE_NUM", "2")
     if "custom_system_prompt" not in st.session_state:
         st.session_state.custom_system_prompt = ""
     if "hide_images" not in st.session_state:
@@ -218,6 +220,7 @@ async def main():
                     response_state=st.session_state.responses,
                 ),
                 api_key=st.session_state.api_key,
+                api_base_url=st.session_state.api_base_url,
                 only_n_most_recent_images=st.session_state.only_n_most_recent_images,
             )
 

@@ -48,6 +48,7 @@ MAX_SCALING_TARGETS: dict[str, dict[str, int]] = {
     "FWXGA": {"width": 1366, "height": 768},  # ~16:9
 }
 
+#mmd新增wait动作的支持
 Action = Literal[
     "key",
     "type",
@@ -59,6 +60,7 @@ Action = Literal[
     "double_click",
     "screenshot",
     "cursor_position",
+    "wait",
 ]
 
 class Resolution(TypedDict):
