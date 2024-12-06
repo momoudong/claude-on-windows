@@ -83,7 +83,7 @@ def init_session_state():
     if "tools" not in st.session_state:
         st.session_state.tools = {}
     if "only_n_most_recent_images" not in st.session_state:
-        st.session_state.only_n_most_recent_images = os.getenv("MOST_IMAGE_NUM", "2")
+        st.session_state.only_n_most_recent_images = int(os.getenv("MOST_IMAGE_NUM", 2))
     if "custom_system_prompt" not in st.session_state:
         st.session_state.custom_system_prompt = ""
     if "hide_images" not in st.session_state:
@@ -128,13 +128,14 @@ async def main():
                 type="password",
                 key="api_key",
             )
-
-        st.number_input(
-            "Only send N most recent images",
-            min_value=0,
-            key="only_n_most_recent_images",
-            help="To decrease the total tokens sent, remove older screenshots from the conversation",
-        )
+        
+        if isinstance(st.session_state.only_n_most_recent_images, int):
+            st.number_input(
+                "Only send N most recent images",
+                min_value=0,
+                key="only_n_most_recent_images",
+                help="To decrease the total tokens sent, remove older screenshots from the conversation",
+            )
         st.text_area(
             "Custom System Prompt Suffix",
             key="custom_system_prompt",

@@ -91,8 +91,10 @@ async def sampling_loop(
     )
 
     while True:
+        
+        image_truncation_threshold = only_n_most_recent_images or 0
         if only_n_most_recent_images:
-            _maybe_filter_to_n_most_recent_images(messages, only_n_most_recent_images)
+            _maybe_filter_to_n_most_recent_images(messages, only_n_most_recent_images, image_truncation_threshold)
 
         if provider == APIProvider.ANTHROPIC:
             client = Anthropic(api_key=api_key, base_url=api_base_url)
@@ -144,7 +146,7 @@ async def sampling_loop(
 def _maybe_filter_to_n_most_recent_images(
     messages: list[BetaMessageParam],
     images_to_keep: int,
-    min_removal_threshold: int = 10,
+    min_removal_threshold: int,
 ):
     """
     With the assumption that images are screenshots that are of diminishing value as

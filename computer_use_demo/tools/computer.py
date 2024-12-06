@@ -429,6 +429,19 @@ class ComputerTool(BaseAnthropicTool):
                 
                 return await self.take_screenshot()
 
+        #添加对wait动作的支持
+        if action in (
+            "wait",
+        ):
+            if text is None:
+                text = 2
+            else:
+                text = int(text)
+
+            if action == "wait":
+                asyncio.sleep(text - self._screenshot_delay)
+                return await self.take_screenshot()
+
         raise ToolError(f"Invalid action: {action}")
 
     async def take_screenshot(self) -> ToolResult:
